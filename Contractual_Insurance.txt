@@ -1,0 +1,25 @@
+INSURANCE CONTRACT
+
+Between the undersigned:
+
+1. **Insured**: John Doe, born on 1782-04-05, residing at 123 Liberty Street, Paris, France.
+2. **Insurer**: Global Insurance Company, a limited liability company, with its headquarters at 50 Champs-Élysées Avenue, Paris, France.
+
+The parties agree as follows:
+
+**Article 1: Purpose of the Contract**
+This contract is for the subscription of a health insurance policy for the insured, covering risks of illness and accidents.
+
+**Article 2: Coverage Amount**
+The coverage amount is $22354 for the year 2025.
+
+**Article 3: Duration of the Contract**
+The contract is for a period of **12 months**, starting on 2021-12-12, and ending on 2022-12-12.
+
+**Article 4: Special Conditions**
+The insurance company agrees to provide health benefits within the limits specified in the general terms and conditions. Payments will be made in case of accident or illness, subject to the exclusions outlined in the general conditions.
+
+Signed in Paris, on **2022-12-12**.
+
+Signature of the Insured: _______________
+Signature of the Insurer: _______________
