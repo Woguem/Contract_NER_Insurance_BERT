@@ -14,36 +14,36 @@ from datetime import datetime
 
 start_time = datetime.now()
 
-# Charger les données annotées depuis un fichier JSON
+# Loading annotated data from a JSON file
 def load_annotated_data(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         data = json.load(file)
-    return data  # Retourne la liste des exemples annotés
+    return data  
 
-# Transformer les données en format adapté au fine-tuning
+# Transform data into a format suitable for fine-tuning
 def preprocess_data(data, tokenizer, label_to_id):
     texts = []
-    labels = []
+    #labels = []
     
     for entry in data:
         text = entry["text"]
         entities = entry["entities"]
 
-        # Tokenization du texte
+        # Text tokenization
         tokenized_input = tokenizer(text, padding="max_length", truncation=True, return_tensors="pt")
         #tokens = tokenizer.convert_ids_to_tokens(tokenized_input['input_ids'][0])
         input_ids = tokenized_input["input_ids"][0]
         attention_mask = tokenized_input["attention_mask"][0]
 
-        # Création des labels pour chaque token
-        label_ids = [0] * len(input_ids)  # 0 pour "O" (aucune entité)
+        # Create labels for each token
+        label_ids = [0] * len(input_ids)  # 0 for “O” (no entity)
         
 
         for entity in entities:
             start, end, label = entity["start"], entity["end"], entity["label"]
             label_id = label_to_id[label]
             
-            # Assigner le label aux tokens correspondants
+            # Assign label to corresponding tokens
             for i in range(len(tokenized_input.tokens())):
                 if tokenized_input.token_to_chars(i) is not None:
                     char_start, char_end = tokenized_input.token_to_chars(i)
@@ -55,72 +55,100 @@ def preprocess_data(data, tokenizer, label_to_id):
     return Dataset.from_list(texts)
 
 
-# Charger un modèle pré-entraîné
+# Load a pre-trained model
 def load_model(model_name, num_labels):
     tokenizer = BertTokenizerFast.from_pretrained(model_name)
     model = BertForTokenClassification.from_pretrained(model_name, num_labels=num_labels, ignore_mismatched_sizes=True)
 
-    # Charger la configuration
-    #config = model.config
-
-    # Mettre à jour le nombre de labels dans la configuration
-    #config.num_labels = len(label_list)
-    # config.label2id = label_to_id
-    #config.id2label = {i: label for i, label in enumerate(label_list)}
-
-    # Assigner la nouvelle configuration au modèle
-    # model.config = config
-
     return model, tokenizer
 
-# Définition des labels
-label_list = ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MONEY", "I-MONEY", "B-DATE", "I-DATE"]
+
+
+def freeze_bert_and_old_classes(model) :#, label_list): #, frozen_labels):
+    """
+    Freezes the weights of the BERT class and the former NER class.
+
+    Args :
+        model: The BERT model with a classification layer.
+        label_list : Complete list of classes.
+        frozen_labels: List of classes whose weights should not be updated.
+    """
+    # Freeze all layers of BERT
+    for param in model.bert.parameters():
+        param.requires_grad = False  
+
+    # Freeze old class weights in the classification layer
+    #classifier_weights = model.classifier.weight
+    #classifier_bias = model.classifier.bias
+
+    #frozen_indices = [label_list.index(label) for label in frozen_labels]
+
+   # with torch.no_grad():
+    #    for idx in frozen_indices:
+    #        classifier_weights[idx].requires_grad = False  #  Old frozen classes
+    #        classifier_bias[idx].requires_grad = False
+
+    #print(f" Fixed weights for : BERT + {frozen_labels}")
+
+# Class definition 
+label_list = ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC",
+              "B-MISC", "I-MISC", "B-MONEY", "I-MONEY", "B-DATE", "I-DATE"]
+
 label_to_id = {label: i for i, label in enumerate(label_list)}
 
-# Charger les données annotées
+# Classes NOT to be trained (Anciennes classes + MISC)
+#frozen_labels = ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC",
+               #  "B-MISC", "I-MISC"]
+
+# Load BERT pre-trained model and tokenizer
+model_name = "dbmdz/bert-large-cased-finetuned-conll03-english"
+model, tokenizer = load_model(model_name, num_labels=len(label_list))
+
+# Apply gel to BERT and old classrooms
+freeze_bert_and_old_classes(model) #, label_list, frozen_labels)
+
+print(f" Taille du classifier : {model.classifier.out_features}")
+
+# Load annotated data
 all_data = load_annotated_data("train_data.json")
 
 
-# Séparer les données en train et validation (90% train, 10% validation)
+# Split data into train and validation (90% train, 10% validation)
 train_data, val_data = train_test_split(all_data, test_size=0.1)
 
-# Charger le modèle pré-entraîné BERT et le tokenizer
-model_name = "dbmdz/bert-large-cased-finetuned-conll03-english"  
-model, tokenizer = load_model(model_name, num_labels=len(label_list))
 
-# Prétraitement des données
+# Data pre-processing
 train_dataset = preprocess_data(train_data, tokenizer, label_to_id)
 val_dataset = preprocess_data(val_data, tokenizer, label_to_id)
 
 
-# Charger la métrique NER
+# Load metric
 metric = evaluate.load("accuracy")
 
-# Fonction pour calculer les métriques
+# Metric calculation function
 def compute_metrics(p):
     predictions, labels = p
-    predictions = np.argmax(predictions, axis=-1)  # Si vos prédictions sont des probabilités, prenez l'index max
+    predictions = np.argmax(predictions, axis=-1)  
     true_predictions = [[p for (p, l) in zip(pred, label) if l != -100] for pred, label in zip(predictions, labels)]
     true_labels = [[l for l in label if l != -100] for label in labels]
 
     true_predictions = true_predictions[0]
     true_labels = true_labels[0]
 
-    # Transformer en format attendu
     return metric.compute(predictions=true_predictions, references=true_labels)
 
 
 
 
-# Fine-tuning du modèle
+# Fine-tuning 
 def fine_tune_model(model, train_dataset, val_dataset):
 
     training_args = TrainingArguments(
         output_dir="./results",
-        num_train_epochs=20,
-        per_device_train_batch_size=9,
+        num_train_epochs=5,
+        per_device_train_batch_size=3,
         per_device_eval_batch_size=1,
-        learning_rate=1e-5,
+        learning_rate=5e-5,
         weight_decay=0.01,
         logging_dir="./logs",
         eval_strategy="epoch",
@@ -148,30 +176,30 @@ model.config.num_labels = len(label_list)
 model.config.id2label = {i: label for i, label in enumerate(label_list)}
 model.config.label2id = {label: i for i, label in enumerate(label_list)}
 
-# Fine-tuning du modèle
+# Model Fine-tuning 
 fine_tune_model(model, train_dataset, val_dataset)
 
-# Sauvegarde du modèle fine-tuné
+# Save model
 model.save_pretrained("./fine_tuned_model")
 tokenizer.save_pretrained("./fine_tuned_model")
 
-# Modifier le fichier config.json pour mettre à jour `_name_or_path`
+# Modify config.json to update `_name_or_path`
 config_path = f"{"./fine_tuned_model"}/config.json"
 with open(config_path, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
-# Changer le nom du modèle dans config.json
+# Change model name in config.json
 config["_name_or_path"] = "dbmdz/bert-large-cased-finetuned-conll03-english-finetuned-money-date-by-Woguem"  
-config["_num_labels"] = 11 
+config["_num_labels"] = 13 
 
-# Sauvegarder les modifications dans config.json
+# Save modifications in config.json
 with open(config_path, 'w', encoding='utf-8') as f:
     json.dump(config, f, indent=4)
 
-print("Fine-tuning terminé et modèle sauvegardé.")
+print("End of Fine-tuning and save model.")
 
 
 
-end_time = datetime.now()  # Fin du chronomètre
+end_time = datetime.now()  
 execution_time = end_time - start_time
 print(f"\nDurée d'exécution : {execution_time}")

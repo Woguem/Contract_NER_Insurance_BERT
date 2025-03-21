@@ -1,6 +1,6 @@
 {
     "_name_or_path": "dbmdz/bert-large-cased-finetuned-conll03-english-finetuned-money-date-by-Woguem",
-    "_num_labels": 11,
+    "_num_labels": 13,
     "architectures": [
         "BertForTokenClassification"
     ],
@@ -18,22 +18,26 @@
         "4": "I-ORG",
         "5": "B-LOC",
         "6": "I-LOC",
-        "7": "B-MONEY",
-        "8": "I-MONEY",
-        "9": "B-DATE",
-        "10": "I-DATE"
+        "7": "B-MISC",
+        "8": "I-MISC",
+        "9": "B-MONEY",
+        "10": "I-MONEY",
+        "11": "B-DATE",
+        "12": "I-DATE"
     },
     "initializer_range": 0.02,
     "intermediate_size": 4096,
     "label2id": {
-        "B-DATE": 9,
+        "B-DATE": 11,
         "B-LOC": 5,
-        "B-MONEY": 7,
+        "B-MISC": 7,
+        "B-MONEY": 9,
         "B-ORG": 3,
         "B-PER": 1,
-        "I-DATE": 10,
+        "I-DATE": 12,
         "I-LOC": 6,
-        "I-MONEY": 8,
+        "I-MISC": 8,
+        "I-MONEY": 10,
         "I-ORG": 4,
         "I-PER": 2,
         "O": 0
