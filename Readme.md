@@ -1,1 +1,1 @@
-This project uses a pre-trained BERT model to perform Named Entity Recognition (NER) on an insurance contract. The model extracts named entities such as people’s names, locations, dates, and monetary values from the provided text. The results are saved in a file.
+This project uses a pre-trained BERT model “dbmdz/bert-large-cased-finetuned-conll03-english”, to fine-tuning it to include the new MONEY and DATE entities (Train_bert_ner_model script). Next, the model is used to perform Named Entity Recognition (NER) on an insurance contract. 
